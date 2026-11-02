@@ -2,15 +2,97 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.product import Product
-from app.schemas.product import ProductCreate, ProductUpdate
+from app.schemas.product import ProductCreate, ProductRead, ProductUpdate
 from app.services.product_service import (
     create_product,
     delete_product,
+    get_products,
     update_product,
 )
+
+
+@pytest.mark.asyncio
+async def test_get_products_returns_cached_products_on_cache_hit() -> None:
+    db = AsyncMock(spec=AsyncSession)
+    redis = AsyncMock(spec=Redis)
+    cached_products = [
+        ProductRead(
+            id=1,
+            name="Keyboard",
+            description="Mechanical keyboard",
+            price=Decimal("99.90"),
+            stock=10,
+        )
+    ]
+    get_cache_mock = AsyncMock(return_value=cached_products)
+    get_repository_mock = AsyncMock()
+    set_cache_mock = AsyncMock()
+
+    with (
+        patch(
+            "app.services.product_service.get_cached_products",
+            get_cache_mock,
+        ),
+        patch(
+            "app.services.product_service.get_all_products",
+            get_repository_mock,
+        ),
+        patch(
+            "app.services.product_service.set_cached_products",
+            set_cache_mock,
+        ),
+    ):
+        result = await get_products(db=db, redis=redis)
+
+    assert result is cached_products
+    get_cache_mock.assert_awaited_once_with(redis)
+    get_repository_mock.assert_not_awaited()
+    set_cache_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_get_products_queries_database_and_caches_on_cache_miss() -> None:
+    db = AsyncMock(spec=AsyncSession)
+    redis = AsyncMock(spec=Redis)
+    database_products = [
+        Product(
+            id=1,
+            name="Keyboard",
+            description="Mechanical keyboard",
+            price=Decimal("99.90"),
+            stock=10,
+        )
+    ]
+    get_cache_mock = AsyncMock(return_value=None)
+    get_repository_mock = AsyncMock(return_value=database_products)
+    set_cache_mock = AsyncMock()
+
+    with (
+        patch(
+            "app.services.product_service.get_cached_products",
+            get_cache_mock,
+        ),
+        patch(
+            "app.services.product_service.get_all_products",
+            get_repository_mock,
+        ),
+        patch(
+            "app.services.product_service.set_cached_products",
+            set_cache_mock,
+        ),
+    ):
+        result = await get_products(db=db, redis=redis)
+
+    assert len(result) == 1
+    assert result[0].id == 1
+    assert result[0].name == "Keyboard"
+    get_cache_mock.assert_awaited_once_with(redis)
+    get_repository_mock.assert_awaited_once_with(db)
+    set_cache_mock.assert_awaited_once_with(redis, result)
 
 
 @pytest.mark.asyncio

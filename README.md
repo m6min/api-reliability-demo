@@ -1,2 +1,2 @@
-# api-reliability-platform
+# API Reliability Demo
 otw.

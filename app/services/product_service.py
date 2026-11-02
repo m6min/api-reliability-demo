@@ -1,12 +1,34 @@
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.cache.product_cache import get_cached_products, set_cached_products
 from app.models.product import Product
 from app.repositories.product_repository import (
     delete_product_by_id,
+    get_all_products,
     save_product,
     update_product_by_id,
 )
-from app.schemas.product import ProductCreate, ProductUpdate
+from app.schemas.product import ProductCreate, ProductRead, ProductUpdate
+
+
+async def get_products(
+    db: AsyncSession,
+    redis: Redis,
+) -> list[ProductRead]:
+    cached_products = await get_cached_products(redis)
+
+    if cached_products is not None:
+        return cached_products
+
+    products = await get_all_products(db)
+    product_response = [
+        ProductRead.model_validate(product)
+        for product in products
+    ]
+    await set_cached_products(redis, product_response)
+
+    return product_response
 
 
 async def create_product(db: AsyncSession, product_data: ProductCreate) -> Product:

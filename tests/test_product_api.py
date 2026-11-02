@@ -20,7 +20,7 @@ def test_get_products_returns_product_list(client: TestClient) -> None:
     products = [make_product()]
 
     with patch(
-        "app.routers.products.get_all_products",
+        "app.routers.products.get_products_service",
         new=AsyncMock(return_value=products),
     ):
         response = client.get("/api/products/")

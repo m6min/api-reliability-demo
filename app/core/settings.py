@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    PRODUCTS_CACHE_TTL_SECONDS: int = 60
 
     @property
     def DATABASE_URL(self) -> str:
@@ -22,4 +26,10 @@ class Settings(BaseSettings):
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD.get_secret_value()}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}")
 
+    @property
+    def REDIS_URL(self) -> str:
+        return (
+            f"redis://{self.REDIS_HOST}:"
+            f"{self.REDIS_PORT}/{self.REDIS_DB}"
+        )
 settings = Settings() #type: ignore

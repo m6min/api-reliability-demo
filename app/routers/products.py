@@ -1,14 +1,13 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.redis import get_redis
 from app.db.session import get_db
 from app.models.product import Product
-from app.repositories.product_repository import (
-    get_all_products,
-    get_product_by_id,
-)
+from app.repositories.product_repository import get_product_by_id
 from app.schemas.product import ProductCreate, ProductRead, ProductUpdate
 from app.services.product_service import (
     create_product as create_product_service,
@@ -16,6 +15,7 @@ from app.services.product_service import (
 from app.services.product_service import (
     delete_product as delete_product_service,
 )
+from app.services.product_service import get_products as get_products_service
 from app.services.product_service import (
     update_product as update_product_service,
 )
@@ -24,8 +24,11 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ProductRead],
             summary="Get all products from database in a list")
-async def get_products(db: Annotated[AsyncSession, Depends(get_db)]) -> list[Product]:
-    return await get_all_products(db)
+async def get_products(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    redis: Annotated[Redis, Depends(get_redis)],
+) -> list[ProductRead]:
+    return await get_products_service(db=db, redis=redis)
 
 @router.post("/", response_model=ProductRead,
             status_code=status.HTTP_201_CREATED, summary="Create a new product into database")
