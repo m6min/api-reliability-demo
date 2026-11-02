@@ -97,7 +97,9 @@ async def test_get_products_queries_database_and_caches_on_cache_miss() -> None:
 
 @pytest.mark.asyncio
 async def test_create_product_builds_product_and_calls_repository() -> None:
+    """It saves a product and invalidates the product list cache."""
     db = AsyncMock(spec=AsyncSession)
+    redis = AsyncMock(spec=Redis)
     product_data = ProductCreate(
         name="Keyboard",
         description="Mechanical keyboard",
@@ -113,9 +115,20 @@ async def test_create_product_builds_product_and_calls_repository() -> None:
     )
 
     save_mock = AsyncMock(return_value=saved_product)
+    invalidate_mock = AsyncMock()
 
-    with patch("app.services.product_service.save_product", save_mock):
-        result = await create_product(db, product_data)
+    with (
+        patch("app.services.product_service.save_product", save_mock),
+        patch(
+            "app.services.product_service.invalidate_products_cache",
+            invalidate_mock,
+        ),
+    ):
+        result = await create_product(
+            db=db,
+            redis=redis,
+            product_data=product_data,
+        )
 
     assert result is saved_product
     save_mock.assert_awaited_once()
@@ -126,11 +139,14 @@ async def test_create_product_builds_product_and_calls_repository() -> None:
     assert called_product.name == "Keyboard"
     assert called_product.price == Decimal("99.90")
     assert called_product.stock == 10
+    invalidate_mock.assert_awaited_once_with(redis)
 
 
 @pytest.mark.asyncio
 async def test_update_product_delegates_to_repository() -> None:
+    """It updates a product and invalidates the product list cache."""
     db = AsyncMock(spec=AsyncSession)
+    redis = AsyncMock(spec=Redis)
     product_data = ProductUpdate(
         name="Updated keyboard",
         description="Updated description",
@@ -146,12 +162,24 @@ async def test_update_product_delegates_to_repository() -> None:
     )
 
     update_mock = AsyncMock(return_value=updated_product)
+    invalidate_mock = AsyncMock()
 
-    with patch(
-        "app.services.product_service.update_product_by_id",
-        update_mock,
+    with (
+        patch(
+            "app.services.product_service.update_product_by_id",
+            update_mock,
+        ),
+        patch(
+            "app.services.product_service.invalidate_products_cache",
+            invalidate_mock,
+        ),
     ):
-        result = await update_product(db, product_id=1, product_data=product_data)
+        result = await update_product(
+            db=db,
+            redis=redis,
+            product_id=1,
+            product_data=product_data,
+        )
 
     assert result is updated_product
     update_mock.assert_awaited_once_with(
@@ -159,15 +187,88 @@ async def test_update_product_delegates_to_repository() -> None:
         product_id=1,
         product_data=product_data,
     )
+    invalidate_mock.assert_awaited_once_with(redis)
+
+
+@pytest.mark.asyncio
+async def test_update_product_keeps_cache_when_product_is_missing() -> None:
+    """It keeps the cache when no product is updated."""
+    db = AsyncMock(spec=AsyncSession)
+    redis = AsyncMock(spec=Redis)
+    product_data = ProductUpdate(
+        name="Missing keyboard",
+        description="Missing product",
+        price=Decimal("109.90"),
+        stock=12,
+    )
+    update_mock = AsyncMock(return_value=None)
+    invalidate_mock = AsyncMock()
+
+    with (
+        patch(
+            "app.services.product_service.update_product_by_id",
+            update_mock,
+        ),
+        patch(
+            "app.services.product_service.invalidate_products_cache",
+            invalidate_mock,
+        ),
+    ):
+        result = await update_product(
+            db=db,
+            redis=redis,
+            product_id=999,
+            product_data=product_data,
+        )
+
+    assert result is None
+    invalidate_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_delete_product_returns_repository_result() -> None:
+    """It deletes a product and invalidates the product list cache."""
     db = AsyncMock(spec=AsyncSession)
+    redis = AsyncMock(spec=Redis)
     delete_mock = AsyncMock(return_value=True)
+    invalidate_mock = AsyncMock()
 
-    with patch("app.services.product_service.delete_product_by_id", delete_mock):
-        result = await delete_product(db, product_id=1)
+    with (
+        patch(
+            "app.services.product_service.delete_product_by_id",
+            delete_mock,
+        ),
+        patch(
+            "app.services.product_service.invalidate_products_cache",
+            invalidate_mock,
+        ),
+    ):
+        result = await delete_product(db=db, redis=redis, product_id=1)
 
     assert result is True
     delete_mock.assert_awaited_once_with(db=db, product_id=1)
+    invalidate_mock.assert_awaited_once_with(redis)
+
+
+@pytest.mark.asyncio
+async def test_delete_product_keeps_cache_when_product_is_missing() -> None:
+    """It keeps the cache when no product is deleted."""
+    db = AsyncMock(spec=AsyncSession)
+    redis = AsyncMock(spec=Redis)
+    delete_mock = AsyncMock(return_value=False)
+    invalidate_mock = AsyncMock()
+
+    with (
+        patch(
+            "app.services.product_service.delete_product_by_id",
+            delete_mock,
+        ),
+        patch(
+            "app.services.product_service.invalidate_products_cache",
+            invalidate_mock,
+        ),
+    ):
+        result = await delete_product(db=db, redis=redis, product_id=999)
+
+    assert result is False
+    invalidate_mock.assert_not_awaited()
