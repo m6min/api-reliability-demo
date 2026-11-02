@@ -15,7 +15,7 @@ async def database_exception_handler(request: Request, exc: SQLAlchemyError) -> 
     logger.exception(
         "Database error on %s %s",
         request.method,
-        request.url.path,
+        request.url.path
     )
     return JSONResponse(
         status_code=500,
