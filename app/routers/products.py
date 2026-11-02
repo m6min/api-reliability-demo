@@ -24,13 +24,16 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ProductRead],
             summary="Get all products from database in a list")
-async def get_products(db: Annotated[AsyncSession, Depends(get_db)], redis: Annotated[Redis, Depends(get_redis)]) -> list[ProductRead]:
+async def get_products(db: Annotated[AsyncSession,
+                                    Depends(get_db)], redis: Annotated[Redis, Depends(get_redis)]) -> list[ProductRead]:
     return await get_products_service(db=db, redis=redis)
 
 @router.post("/", response_model=ProductRead,
             status_code=status.HTTP_201_CREATED, summary="Create a new product into database")
-async def create_product(product_data: ProductCreate, db: Annotated[AsyncSession, Depends(get_db)], redis: Annotated[Redis, Depends(get_redis)]):
-    return await create_product_service(db=db, redis=redis , product_data=product_data)
+async def create_product(product_data: ProductCreate,
+                        db: Annotated[AsyncSession, Depends(get_db)],
+                        redis: Annotated[Redis, Depends(get_redis)]):
+    return await create_product_service(db=db, redis=redis, product_data=product_data)
 
 @router.get("/{product_id}", response_model=ProductRead)
 async def get_product(product_id: int, db: Annotated[AsyncSession, Depends(get_db)]) -> Product:
@@ -42,7 +45,8 @@ async def get_product(product_id: int, db: Annotated[AsyncSession, Depends(get_d
 
 @router.put("/{product_id}",
             response_model=ProductRead, summary="Update a product with id")
-async def update_product(product_id: int, product_data: ProductUpdate, db: Annotated[AsyncSession, Depends(get_db)],  redis: Annotated[Redis, Depends(get_redis)]) -> Product:
+async def update_product(product_id: int, product_data: ProductUpdate,
+                        db: Annotated[AsyncSession, Depends(get_db)],  redis: Annotated[Redis, Depends(get_redis)]) -> Product:
     product = await update_product_service(
         db=db,
         product_id=product_id,
@@ -60,7 +64,8 @@ async def update_product(product_id: int, product_data: ProductUpdate, db: Annot
 
 @router.delete("/{product_id}",
             status_code=status.HTTP_204_NO_CONTENT, summary="Delete your product with id")
-async def delete_product(product_id: int, db: Annotated[AsyncSession, Depends(get_db)],  redis: Annotated[Redis, Depends(get_redis)]) -> None:
+async def delete_product(product_id: int,
+                        db: Annotated[AsyncSession, Depends(get_db)],  redis: Annotated[Redis, Depends(get_redis)]) -> None:
     result = await delete_product_service(db=db, product_id=product_id, redis=redis)
     if not result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No matched product for id of {product_id}")
