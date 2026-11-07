@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.redis import get_redis
 from app.db.session import get_db
 from app.models.product import Product
+from app.rate_limit.dependencies import rate_limit
 from app.repositories.product_repository import get_product_by_id
 from app.schemas.product import ProductCreate, ProductRead, ProductUpdate
 from app.services.product_service import (
@@ -23,7 +24,10 @@ from app.services.product_service import (
 router = APIRouter()
 
 @router.get("/", response_model=list[ProductRead],
-            summary="Get all products from database in a list")
+            summary="Get all products from database in a list",
+            dependencies=[
+                Depends(rate_limit(namespace="products:list"))
+            ])
 async def get_products(db: Annotated[AsyncSession,
                                     Depends(get_db)], redis: Annotated[Redis, Depends(get_redis)]) -> list[ProductRead]:
     return await get_products_service(db=db, redis=redis)

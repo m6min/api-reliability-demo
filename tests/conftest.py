@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
+from app.core.redis import get_redis
 from app.core.settings import settings
 from app.db.base import Base
 from app.db.session import get_db
@@ -26,13 +27,26 @@ TEST_DATABASE_URL = (
 
 
 @pytest.fixture
-def client() -> Generator[TestClient, None, None]:
+def redis_mock() -> AsyncMock:
+    redis = AsyncMock()
+    redis.eval = AsyncMock(
+        return_value=[1, settings.RATE_LIMIT_WINDOW_SECONDS]
+    )
+    return redis
+
+
+@pytest.fixture
+def client(redis_mock: AsyncMock) -> Generator[TestClient, None, None]:
     db = AsyncMock(spec=AsyncSession)
 
     async def override_get_db():
         yield db
 
+    async def override_get_redis():
+        return redis_mock
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_redis] = override_get_redis
 
     with TestClient(app) as test_client:
         yield test_client
