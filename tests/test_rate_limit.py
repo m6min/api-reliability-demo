@@ -4,6 +4,7 @@ import pytest
 from fastapi import HTTPException, Request
 from fastapi.testclient import TestClient
 
+from app.core.settings import settings
 from app.rate_limit.dependencies import rate_limit
 from app.rate_limit.limiter import RATE_LIMIT_SCRIPT, increment_rate_limit
 
@@ -93,12 +94,15 @@ def test_get_products_returns_429_before_service_runs(
     client: TestClient,
 ) -> None:
     """It blocks the product endpoint before its service is called."""
+    # Arrange: exceed the active environment limit, including load-test values.
     service_mock = AsyncMock()
 
     with (
         patch(
             "app.rate_limit.dependencies.increment_rate_limit",
-            new=AsyncMock(return_value=(11, 25)),
+            new=AsyncMock(
+                return_value=(settings.RATE_LIMIT_REQUESTS + 1, 25)
+            ),
         ),
         patch(
             "app.routers.products.get_products_service",

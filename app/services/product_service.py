@@ -6,6 +6,7 @@ from app.cache.product_cache import (
     invalidate_products_cache,
     set_cached_products,
 )
+from app.core.settings import settings
 from app.models.product import Product
 from app.repositories.product_repository import (
     delete_product_by_id,
@@ -17,16 +18,19 @@ from app.schemas.product import ProductCreate, ProductRead, ProductUpdate
 
 
 async def get_products(db: AsyncSession, redis: Redis) -> list[ProductRead]:
-    cached_products = await get_cached_products(redis)
+    if settings.PRODUCTS_CACHE_ENABLED:
+        cached_products = await get_cached_products(redis)
 
-    if cached_products is not None:
-        return cached_products
+        if cached_products is not None:
+            return cached_products
 
     products = await get_all_products(db)
     product_response = [
-        ProductRead.model_validate(product) for product in products
+        ProductRead.model_validate(product)
+        for product in products
     ]
-    await set_cached_products(redis, product_response)
+    if settings.PRODUCTS_CACHE_ENABLED:
+        await set_cached_products(redis, product_response)
 
     return product_response
 

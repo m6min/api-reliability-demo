@@ -6,7 +6,7 @@ from ..core.settings import settings
 
 engine = create_async_engine(
     settings.DATABASE_URL,
-    echo = True,
+    echo = settings.SQL_ECHO,
     pool_pre_ping=True,
     pool_recycle=900,
     pool_timeout=120

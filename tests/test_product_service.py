@@ -5,6 +5,7 @@ import pytest
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.settings import settings
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductRead, ProductUpdate
 from app.services.product_service import (
@@ -17,6 +18,7 @@ from app.services.product_service import (
 
 @pytest.mark.asyncio
 async def test_get_products_returns_cached_products_on_cache_hit() -> None:
+    # Arrange: prepare a cached product and mock every external dependency.
     db = AsyncMock(spec=AsyncSession)
     redis = AsyncMock(spec=Redis)
     cached_products = [
@@ -33,6 +35,7 @@ async def test_get_products_returns_cached_products_on_cache_hit() -> None:
     set_cache_mock = AsyncMock()
 
     with (
+        patch.object(settings, "PRODUCTS_CACHE_ENABLED", True),
         patch(
             "app.services.product_service.get_cached_products",
             get_cache_mock,
@@ -46,8 +49,10 @@ async def test_get_products_returns_cached_products_on_cache_hit() -> None:
             set_cache_mock,
         ),
     ):
+        # Act: execute the service under the cache-enabled configuration.
         result = await get_products(db=db, redis=redis)
 
+    # Assert: return Redis data without querying PostgreSQL or rewriting cache.
     assert result is cached_products
     get_cache_mock.assert_awaited_once_with(redis)
     get_repository_mock.assert_not_awaited()
@@ -56,6 +61,7 @@ async def test_get_products_returns_cached_products_on_cache_hit() -> None:
 
 @pytest.mark.asyncio
 async def test_get_products_queries_database_and_caches_on_cache_miss() -> None:
+    # Arrange: simulate an empty cache and a product returned by PostgreSQL.
     db = AsyncMock(spec=AsyncSession)
     redis = AsyncMock(spec=Redis)
     database_products = [
@@ -72,6 +78,7 @@ async def test_get_products_queries_database_and_caches_on_cache_miss() -> None:
     set_cache_mock = AsyncMock()
 
     with (
+        patch.object(settings, "PRODUCTS_CACHE_ENABLED", True),
         patch(
             "app.services.product_service.get_cached_products",
             get_cache_mock,
@@ -85,14 +92,62 @@ async def test_get_products_queries_database_and_caches_on_cache_miss() -> None:
             set_cache_mock,
         ),
     ):
+        # Act: execute the service while cache is enabled but empty.
         result = await get_products(db=db, redis=redis)
 
+    # Assert: query PostgreSQL once and store its converted result in Redis.
     assert len(result) == 1
     assert result[0].id == 1
     assert result[0].name == "Keyboard"
     get_cache_mock.assert_awaited_once_with(redis)
     get_repository_mock.assert_awaited_once_with(db)
     set_cache_mock.assert_awaited_once_with(redis, result)
+
+
+@pytest.mark.asyncio
+async def test_get_products_bypasses_cache_when_disabled() -> None:
+    """It reads PostgreSQL without using Redis when cache is disabled."""
+    # Arrange: prepare a database result and mocks for both cache operations.
+    db = AsyncMock(spec=AsyncSession)
+    redis = AsyncMock(spec=Redis)
+    database_products = [
+        Product(
+            id=1,
+            name="Keyboard",
+            description="Mechanical keyboard",
+            price=Decimal("99.90"),
+            stock=10,
+        )
+    ]
+    get_cache_mock = AsyncMock()
+    get_repository_mock = AsyncMock(return_value=database_products)
+    set_cache_mock = AsyncMock()
+
+    with (
+        patch.object(settings, "PRODUCTS_CACHE_ENABLED", False),
+        patch(
+            "app.services.product_service.get_cached_products",
+            get_cache_mock,
+        ),
+        patch(
+            "app.services.product_service.get_all_products",
+            get_repository_mock,
+        ),
+        patch(
+            "app.services.product_service.set_cached_products",
+            set_cache_mock,
+        ),
+    ):
+        # Act: execute the service under the cache-disabled configuration.
+        result = await get_products(db=db, redis=redis)
+
+    # Assert: use PostgreSQL and never read from or write to Redis cache.
+    assert len(result) == 1
+    assert result[0].id == 1
+    assert result[0].name == "Keyboard"
+    get_cache_mock.assert_not_awaited()
+    get_repository_mock.assert_awaited_once_with(db)
+    set_cache_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio

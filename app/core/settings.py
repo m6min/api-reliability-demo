@@ -19,8 +19,10 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     PRODUCTS_CACHE_TTL_SECONDS: int = 60
+    PRODUCTS_CACHE_ENABLED: bool = True
     RATE_LIMIT_REQUESTS: int = 10
     RATE_LIMIT_WINDOW_SECONDS: int = 60
+    SQL_ECHO: bool = False
     @property
     def DATABASE_URL(self) -> str:
         return (
