@@ -75,7 +75,7 @@
         <div class="card-head">
           <div>
             <h2>Latency percentiles</h2>
-            <p class="sub">How slow the slowest X% of requests were.</p>
+            <p class="sub">P95 is the time about 95% of requests finished within. P99 does the same for 99%.</p>
           </div>
           <label class="toggle"><input type="checkbox" id="pct-log"> Log scale</label>
         </div>
@@ -128,7 +128,7 @@
           <span class="pill warn">Single run</span>
         </div>
         <div class="chart" id="wk-chart" style="height:260px"></div>
-        <p class="note">I expected the second worker to help. It didn't: average went from 9 ms to 22 ms and P99 from 32 ms to 120 ms at the same ~500 req/s. With Locust, Docker and both workers fighting over one laptop, I don't read this as "more workers are slower", only that this machine had no headroom to spare.</p>
+        <p class="note">I expected the second worker to help. In these runs it didn't: average went from 9 ms to 22 ms and P99 from 32 ms to 120 ms at roughly 500 req/s. Everything shared one laptop, but I didn't measure which part caused the slowdown. This is one comparison, not a rule that more workers are slower.</p>
       </article>
     </section>
 

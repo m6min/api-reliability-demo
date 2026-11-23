@@ -232,9 +232,9 @@ function renderTimeline(runs, detail) {
   const unit = metric === 'rps' ? ' req/s' : ' ms';
   const o = tail(off, metric), n = tail(on, metric);
   const msg = {
-    rps: `In the second half of each run, uncached runs sit around <b>${fmt(o)} req/s</b> and cached runs around <b>${fmt(n)} req/s</b>. ${n >= TARGET_RPS * 0.95 ? 'Cached runs sit right on the 500 target, so the load generator, not the API, is the ceiling here.' : 'Neither group reaches the 500 target, so the API is the bottleneck in both cases.'}`,
-    p50: `Median latency is flat once the run settles: about <b>${fmt(o)} ms</b> without cache and <b>${fmt(n)} ms</b> with it. Flat lines mean the queue isn't growing; the API is slow but steady.`,
-    p95: `P95 settles at roughly <b>${fmt(o)} ms</b> (OFF) vs <b>${fmt(n)} ms</b> (ON). Spikes at the very start are the first requests hitting a freshly restarted process.`
+    rps: `Near the end of the runs, uncached samples sit around <b>${fmt(o)} req/s</b> and cached samples around <b>${fmt(n)} req/s</b>. ${n >= TARGET_RPS * 0.95 ? 'The cached runs get close to my 500 req/s target. That tells me they handled this workload, not how much more they could handle.' : 'Neither group reaches my 500 req/s target. I would need more measurements to tell which part is holding things up.'}`,
+    p50: `Near the end of the runs, sampled median latency is around <b>${fmt(o)} ms</b> without cache and <b>${fmt(n)} ms</b> with it. I use this view to see how response times change during a run; I didn't measure queue length.`,
+    p95: `Near the end of the runs, sampled P95 is around <b>${fmt(o)} ms</b> (OFF) vs <b>${fmt(n)} ms</b> (ON). P95 means about 95% of requests finish within that time. I can see spikes here, but the chart alone doesn't tell me what caused them.`
   }[metric];
   $('#tl-note').innerHTML = msg;
 }
@@ -250,7 +250,7 @@ function renderPercentiles(runs, detail) {
   const { off, on } = split(runs);
   const at = (g, i) => median(g.map(r => detail[r.id]?.pct[i]).filter(Number.isFinite));
   const i99 = PCT_KEYS.indexOf('99%');
-  $('#pct-note').innerHTML = `Typical request: <b>${fmt(at(off, 0))} → ${fmt(at(on, 0))} ms</b>. One in a hundred: <b>${fmt(at(off, i99))} → ${fmt(at(on, i99))} ms</b>. The cached curve stays below the uncached one all the way to the max, so the cache isn't just helping the easy requests.`;
+  $('#pct-note').innerHTML = `Median latency (P50): <b>${fmt(at(off, 0))} → ${fmt(at(on, 0))} ms</b>. P99: <b>${fmt(at(off, i99))} → ${fmt(at(on, i99))} ms</b>, OFF → ON. P99 is the time about 99% of requests finish within; roughly 1% take longer. These numbers are medians of the three runs' percentiles, not percentiles calculated from all requests together.`;
 }
 
 function renderRuns(runs) {
@@ -265,7 +265,7 @@ function renderRuns(runs) {
   const rng = g => `${fmt(Math.min(...g.map(r => r[metric])))}–${fmt(Math.max(...g.map(r => r[metric])))}`;
   const spread = g => (Math.max(...g.map(r => r[metric])) - Math.min(...g.map(r => r[metric]))) / med(g, metric) * 100;
   const noisier = spread(off) > spread(on) ? 'uncached' : 'cached';
-  $('#run-note').innerHTML = `I alternated the order so that any slow drift on the laptop would hit both groups. OFF ranged <b>${rng(off)}</b>, ON ranged <b>${rng(on)}</b>${isLatency(metric) ? ' ms' : ' req/s'}. The ${noisier} runs were the noisier ones, but the two groups never overlap.`;
+  $('#run-note').innerHTML = `I mixed the OFF/ON order to reduce the effect of changes on my laptop over time. OFF ranged <b>${rng(off)}</b>, ON ranged <b>${rng(on)}</b>${isLatency(metric) ? ' ms' : ' req/s'}. The ${noisier} runs varied more relative to their median. I show all three so one unusually good run doesn't tell the whole story.`;
 }
 
 function renderDatasets() {
@@ -279,7 +279,7 @@ function renderDatasets() {
   const cut = g => fmt(Math.abs(pct(g.bars[0].value, g.bars[1].value)));
   $('#ds-note').innerHTML = isLatency(metric)
     ? `Going from 2 to 500 products made uncached requests <b>${(b.bars[0].value / s.bars[0].value).toFixed(1)}×</b> slower and cached ones <b>${(b.bars[1].value / s.bars[1].value).toFixed(0)}×</b> slower. The cache still cuts ${cut(b)}%, down from ${cut(s)}%. My read: Redis saves the database trip, but a 70 KB list still has to be serialized and sent every time, and that part doesn't get cached away.`
-    : `With 2 products the cached API keeps up with the full 500 req/s target. With 500 products it tops out near <b>${fmt(b.bars[1].value)} req/s</b> even with the cache, and around <b>${fmt(b.bars[0].value)}</b> without it.`;
+    : `With 2 products the cached API gets close to my 500 req/s target. With 500 products I measured around <b>${fmt(b.bars[1].value)} req/s</b> with cache and <b>${fmt(b.bars[0].value)}</b> without it. These are results for this workload, not maximum capacity figures.`;
 }
 
 function renderWorkers() {
@@ -306,15 +306,15 @@ function renderTakeaways(runs, detail) {
   const total = runs.reduce((s, r) => s + r.requests, 0), fails = runs.reduce((s, r) => s + r.failures, 0);
   const size = Object.values(detail)[0]?.size || 0;
   const items = [
-    `Turning Redis on dropped average response time from <mark>${fmt(a0)} ms down to ${fmt(a1)} ms</mark> (${fmt(Math.abs(pct(a0, a1)))}% faster).`,
+    `In these runs, turning Redis on dropped average response time from <mark>${fmt(a0)} ms down to ${fmt(a1)} ms</mark> (${fmt(Math.abs(pct(a0, a1)))}% lower latency).`,
     r1 >= TARGET_RPS * 0.95
-      ? `With cache ON, the API easily hit my <mark>500 req/s target</mark>. Without cache, it maxed out at ${fmt(r0)} req/s.`
+      ? `With cache ON, the API got close to my <mark>500 req/s target</mark>. Without cache, I measured around ${fmt(r0)} req/s in this workload.`
       : `Cache boosted throughput from <mark>${fmt(r0)} to ${fmt(r1)} req/s</mark> (${(r1 / r0).toFixed(1)}×), though it still fell short of the 500 req/s target.`
   ];
-  if (size > 10000) items.push(`Each response sends <mark>${fmt(size / 1024)} KB of JSON</mark>. At 500 products, the real bottleneck is sending that huge list over the wire, not the database—so <mark>pagination is the obvious next fix</mark>.`);
+  if (size > 10000) items.push(`Each response sends about <mark>${fmt(size / 1024)} KB of JSON</mark>. Even with cache, the API still has to prepare and send the whole list. <mark>Pagination could help</mark>, but I haven't measured how much time each step takes.`);
   const worst = on.reduce((a, b) => b.p95 > a.p95 ? b : a);
-  if (worst.p95 > 2 * median(on.map(r => r.p95))) items.push(`Run ${runNo(worst.id)} had an odd P95 spike (<mark>${fmt(worst.p95)} ms</mark>), likely just background noise on my laptop.`);
-  items.push(`Across all <mark>${fmt(total)} requests</mark> I saw <mark>${fails} failures</mark>, and every run returned the exact same data.`);
+  if (worst.p95 > 2 * median(on.map(r => r.p95))) items.push(`Run ${runNo(worst.id)} had a higher P95 (<mark>${fmt(worst.p95)} ms</mark>). I kept it in the results; I don't know what caused that spike.`);
+  items.push(`Across the recorded <mark>${fmt(total)} requests</mark> I saw <mark>${fails} failures</mark>. I also saved a response fingerprint before each run to check that the starting data stayed the same.`);
   $('#takeaway-list').innerHTML = items.map(t => `<li>${t}</li>`).join('');
 }
 
