@@ -1,0 +1,6 @@
+# GitHub Linguist overrides
+docs/* linguist-documentation=false
+docs/data/** linguist-generated=true
+uv.lock linguist-generated=true
+alembic/versions/*.py linguist-generated=true
+alembic/script.py.mako linguist-vendored=true
