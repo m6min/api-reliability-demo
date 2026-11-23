@@ -7,3 +7,8 @@ Thumbs.db
 .uv/
 commands.md
 .pytest_cache/
+docs/data/**/*.log
+docs/data/**/*_failures.csv
+docs/data/**/*_exceptions.csv
+docs/data/seed-500.json
+AGENTS.md

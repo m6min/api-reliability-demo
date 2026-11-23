@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Redis cache benchmark · API Reliability Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <nav aria-label="Sections">
+      <a href="#top" class="active">Overview</a>
+      <a href="#timeline">Overtime</a>
+      <a href="#distribution">Distribution</a>
+      <a href="#datasets">Dataset size</a>
+      <a href="#runs">All runs</a>
+      <a href="#method">How I measured</a>
+    </nav>
+    <a class="repo" href="https://github.com/m6min/api-reliability-demo" target="_blank" rel="noopener">github.com/m6min/api-reliability-demo</a>
+    <div class="stack">
+      <span>FastAPI</span><span>PostgreSQL</span><span>Redis</span><span>Locust</span>
+    </div>
+  </aside>
+
+  <main id="top">
+    <header class="topbar">
+      <div>
+        <h1>Redis cache benchmark</h1>
+        <p class="crumb">GET /api/products · 50 users · 1 worker · 60 s per run</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="segmented" role="group" aria-label="Dataset">
+          <button data-dataset="verification" aria-pressed="false">2 products</button>
+          <button data-dataset="products-500" aria-pressed="true">500 products</button>
+        </div>
+        <a class="btn-ghost" id="download" href="data/products-500/results.json" download>Raw JSON</a>
+      </div>
+    </header>
+
+    <p id="status" class="status" role="status">Loading recorded runs…</p>
+
+    <section class="grid kpis" id="kpis" aria-label="Key numbers"></section>
+
+    <section class="grid two">
+      <article class="card wide" id="timeline">
+        <div class="card-head">
+          <div>
+            <h2>Second by second</h2>
+            <p class="sub">Each line is one 60‑second run, as Locust sampled it.</p>
+          </div>
+          <div class="controls">
+            <select id="tl-metric" aria-label="Timeline metric">
+              <option value="rps">Requests / s</option>
+              <option value="p50">Median latency</option>
+              <option value="p95">P95 latency</option>
+            </select>
+          </div>
+        </div>
+        <div class="legend" id="tl-legend"></div>
+        <div class="chart" id="tl-chart" style="height:300px"></div>
+        <p class="note" id="tl-note"></p>
+      </article>
+
+      <article class="card" id="takeaways">
+        <div class="card-head"><h2>What I took away</h2></div>
+        <ul class="takeaways" id="takeaway-list"></ul>
+      </article>
+    </section>
+
+    <section class="grid two-even">
+      <article class="card" id="distribution">
+        <div class="card-head">
+          <div>
+            <h2>Latency percentiles</h2>
+            <p class="sub">How slow the slowest X% of requests were.</p>
+          </div>
+          <label class="toggle"><input type="checkbox" id="pct-log"> Log scale</label>
+        </div>
+        <div class="legend" id="pct-legend"></div>
+        <div class="chart" id="pct-chart" style="height:280px"></div>
+        <p class="note" id="pct-note"></p>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <div>
+            <h2>Run to run</h2>
+            <p class="sub">Runs in the order they happened: OFF, ON, ON, OFF, OFF, ON.</p>
+          </div>
+          <select id="run-metric" aria-label="Run metric">
+            <option value="avg">Average latency</option>
+            <option value="p95">P95 latency</option>
+            <option value="p99">P99 latency</option>
+            <option value="rps">Requests / s</option>
+          </select>
+        </div>
+        <div class="chart" id="run-chart" style="height:280px"></div>
+        <p class="note" id="run-note"></p>
+      </article>
+    </section>
+
+    <section class="grid two-even">
+      <article class="card" id="datasets">
+        <div class="card-head">
+          <div>
+            <h2>2 products vs 500 products</h2>
+            <p class="sub">Median of three runs per bar.</p>
+          </div>
+          <select id="ds-metric" aria-label="Dataset metric">
+            <option value="avg">Average latency</option>
+            <option value="p95">P95 latency</option>
+            <option value="rps">Requests / s</option>
+          </select>
+        </div>
+        <div class="chart" id="ds-chart" style="height:260px"></div>
+        <p class="note" id="ds-note"></p>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <div>
+            <h2>1 worker vs 2 workers</h2>
+            <p class="sub">Earlier single runs · cache ON · 2 products.</p>
+          </div>
+          <span class="pill warn">Single run</span>
+        </div>
+        <div class="chart" id="wk-chart" style="height:260px"></div>
+        <p class="note">I expected the second worker to help. It didn't: average went from 9 ms to 22 ms and P99 from 32 ms to 120 ms at the same ~500 req/s. With Locust, Docker and both workers fighting over one laptop, I don't read this as "more workers are slower", only that this machine had no headroom to spare.</p>
+      </article>
+    </section>
+
+    <article class="card" id="runs">
+      <div class="card-head">
+        <div><h2>All runs</h2><p class="sub" id="runs-sub"></p></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Run</th><th>Cache</th><th class="num">Requests</th><th class="num">Avg ms</th><th class="num">P95 ms</th><th class="num">P99 ms</th><th class="num">Req/s</th><th class="num">Failures</th><th>Checks</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="card method" id="method">
+      <div class="card-head"><h2>How I measured</h2></div>
+      <ul class="takeaways">
+        <li><b>Load:</b> I ran <mark>50 Locust users</mark> aiming for 10 req/s each (<mark>500 req/s target</mark>). If the API slows down, users wait for responses and the actual request rate drops.</li>
+        <li><b>Order:</b> I ran six 60‑second tests alternating <mark>OFF, ON, ON, OFF, OFF, ON</mark>. Before each run, I restarted the API and sent 20 warm‑up requests so the cache was already warm.</li>
+        <li><b>Machine:</b> Everything ran locally on my <mark>Ryzen 7 5700U laptop</mark> (Windows, Python 3.13)—the API, Locust, and Docker containers all shared the same machine.</li>
+        <li><b>Scope:</b> I didn't track SQL query counts or CPU usage per container, and the charts show the <mark>median of three runs</mark> rather than pooling all requests together.</li>
+      </ul>
+    </article>
+
+    <footer>measured on 23 Nov 2026 · raw CSVs and logs live in <code>docs/data</code></footer>
+  </main>
+</div>
+<div class="tooltip" id="tooltip" role="tooltip"></div>
+<script src="script.js"></script>
+</body>
+</html>
