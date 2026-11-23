@@ -8,7 +8,7 @@ from app.repositories.user_repository import get_user_by_email, save_user
 from app.schemas.user import UserCreate
 
 
-class EmailALreadyRegisteredError(Exception):
+class EmailAlreadyRegisteredError(Exception):
     pass
 
 async def register_user(db: AsyncSession, user_data: UserCreate) -> User:
@@ -18,7 +18,7 @@ async def register_user(db: AsyncSession, user_data: UserCreate) -> User:
     email = str(user_data.email).lower()
     existing_user = await get_user_by_email(db, email)
     if existing_user is not None:
-        raise EmailALreadyRegisteredError()
+        raise EmailAlreadyRegisteredError()
     hashed_password = await run_in_threadpool(
         hash_password,
         user_data.password.get_secret_value()
@@ -32,5 +32,5 @@ async def register_user(db: AsyncSession, user_data: UserCreate) -> User:
     except IntegrityError as exc:
         existing_user = await get_user_by_email(db=db, email=email)
         if existing_user is not None:
-            raise EmailALreadyRegisteredError() from exc
+            raise EmailAlreadyRegisteredError() from exc
         raise
