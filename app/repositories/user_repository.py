@@ -25,3 +25,10 @@ async def save_user(db: AsyncSession,
     except SQLAlchemyError:
         await db.rollback()
         raise
+
+async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
+    try:
+        return await db.get(User, user_id)
+    except SQLAlchemyError:
+        await db.rollback()
+        raise
