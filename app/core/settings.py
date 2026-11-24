@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     PRODUCTS_CACHE_ENABLED: bool = True
     RATE_LIMIT_REQUESTS: int = 10
     RATE_LIMIT_WINDOW_SECONDS: int = 60
+    JWT_SECRET_KEY: SecretStr = Field(min_length=32)
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30,gt=0)
     SQL_ECHO: bool = False
     @property
     def DATABASE_URL(self) -> str:
