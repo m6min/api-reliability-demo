@@ -24,8 +24,8 @@ def create_access_token(user_id:int) -> str:
         "iat":now,
         "exp": now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     }
-    return jwt.encode(payload, settings.JWT_SECRET_KEY.get_secret_value(), JWT_ALGORITHM)
+    return jwt.encode(payload, settings.JWT_SECRET_KEY.get_secret_value(), algorithm=JWT_ALGORITHM)
 
 def decode_access_token(token: str) -> dict[str, Any]:
-    return jwt.decode(token, key=settings.JWT_SECRET_KEY.get_secret_value(), algorithms=JWT_ALGORITHM,
+    return jwt.decode(token, key=settings.JWT_SECRET_KEY.get_secret_value(), algorithms=[JWT_ALGORITHM],
                     options={"require": ["sub","iat","exp"]})

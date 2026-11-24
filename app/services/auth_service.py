@@ -53,7 +53,7 @@ async def authenticate_user(
     password_matches = await run_in_threadpool(
         verify_password,
         login_data.password.get_secret_value(),
-        stored_hash,
+        stored_hash
     )
 
     if user is None or not password_matches:
