@@ -14,3 +14,8 @@ class UserRead(BaseModel):
     email: EmailStr
     is_active: bool
     created_at: datetime
+
+class UserLogin(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    email: EmailStr = Field(max_length=254)
+    password: SecretStr = Field(min_length=1, max_length=128)
