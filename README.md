@@ -1,12 +1,12 @@
 # API Reliability Demo
 
+**Start with the visual docs instead of boring plain text:** [Benchmark report](https://m6min.github.io/api-reliability-demo/) · [What I put into practice](https://m6min.github.io/api-reliability-demo/implementation.html)
+
 I built this project to put things I had learned in theory into practice: caching, rate limiting, authentication, and handling failures. I kept the API simple on purpose. Products gave me something familiar to read and update while I focused on how the backend behaves.
 
 My main goal was to learn how load-testing tools work: how Locust generates requests, how user count and pacing affect the load, and how to read response times, percentiles, throughput, and failures. Comparing cache ON and OFF gave me a practical experiment to learn from.
 
 **This is a learning and experimentation project.** I built it to try backend concepts and understand measurements on my own laptop. I did not design or validate it as a production service, and the results are not a promise about how it would perform with real users or on a different server.
-
-**Start with the visual docs instead of boring plain text:** [Benchmark report](https://m6min.github.io/api-reliability-demo/) · [What I put into practice](https://m6min.github.io/api-reliability-demo/implementation.html)
 
 The report uses saved measurements. It does not send traffic to a live API. The backend is intended to run locally; the same docs can also be [served locally](#view-the-docs-locally).
 
