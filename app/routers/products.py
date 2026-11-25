@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import require_admin
 from app.core.redis import get_redis
 from app.db.session import get_db
 from app.models.product import Product
@@ -33,7 +34,8 @@ async def get_products(db: Annotated[AsyncSession,
     return await get_products_service(db=db, redis=redis)
 
 @router.post("/", response_model=ProductRead,
-            status_code=status.HTTP_201_CREATED, summary="Create a new product into database")
+            status_code=status.HTTP_201_CREATED, summary="Create a new product into database",
+            dependencies=[Depends(require_admin)])
 async def create_product(product_data: ProductCreate,
                         db: Annotated[AsyncSession, Depends(get_db)],
                         redis: Annotated[Redis, Depends(get_redis)]):
@@ -48,7 +50,8 @@ async def get_product(product_id: int, db: Annotated[AsyncSession, Depends(get_d
     return product
 
 @router.put("/{product_id}",
-            response_model=ProductRead, summary="Update a product with id")
+            response_model=ProductRead, summary="Update a product with id",
+            dependencies=[Depends(require_admin)])
 async def update_product(product_id: int, product_data: ProductUpdate,
                         db: Annotated[AsyncSession, Depends(get_db)],  redis: Annotated[Redis, Depends(get_redis)]) -> Product:
     product = await update_product_service(
@@ -67,7 +70,8 @@ async def update_product(product_id: int, product_data: ProductUpdate,
     return product
 
 @router.delete("/{product_id}",
-            status_code=status.HTTP_204_NO_CONTENT, summary="Delete your product with id")
+            status_code=status.HTTP_204_NO_CONTENT, summary="Delete your product with id",
+            dependencies=[Depends(require_admin)])
 async def delete_product(product_id: int,
                         db: Annotated[AsyncSession, Depends(get_db)],  redis: Annotated[Redis, Depends(get_redis)]) -> None:
     result = await delete_product_service(db=db, product_id=product_id, redis=redis)

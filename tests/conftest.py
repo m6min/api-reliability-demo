@@ -16,6 +16,8 @@ from app.core.settings import settings
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
+from app.api.dependencies import get_current_user
+from app.models.user import User
 from app.models.product import Product  # noqa: F401
 
 
@@ -24,6 +26,17 @@ TEST_DATABASE_URL = (
     f"{settings.DATABASE_URL.rsplit('/', maxsplit=1)[0]}"
     f"/{TEST_DATABASE_NAME}"
 )
+
+
+@pytest.fixture
+def admin_access(client):
+    """It supplies an admin identity while keeping the real permission check."""
+    async def override_current_user():
+        return User(id=1, is_active=True, is_admin=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.fixture

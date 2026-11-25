@@ -65,7 +65,7 @@ def test_auth_stops_when_rate_limiter_is_unavailable(client, redis_mock, redis_f
     ("PUT", "/api/products/7", "update_product_by_id", 200),
     ("DELETE", "/api/products/7", "delete_product_by_id", 204),
 ])
-def test_cache_invalidation_failure_preserves_success(client, redis_mock, redis_failure, product, caplog,
+def test_cache_invalidation_failure_preserves_success(client, admin_access, redis_mock, redis_failure, product, caplog,
                                                      method, path, repository_name, expected_status):
     """It preserves a successful database result when cache deletion fails."""
     # Arrange: the repository succeeds; only the later Redis deletion fails.

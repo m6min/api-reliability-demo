@@ -55,7 +55,7 @@ def test_get_product_returns_product(client: TestClient) -> None:
     assert response.json()["name"] == "Keyboard"
 
 
-def test_create_product_returns_201(client: TestClient) -> None:
+def test_create_product_returns_201(client: TestClient, admin_access) -> None:
     with patch(
         "app.routers.products.create_product_service",
         new=AsyncMock(return_value=make_product()),
@@ -75,7 +75,7 @@ def test_create_product_returns_201(client: TestClient) -> None:
     assert response.json()["name"] == "Keyboard"
 
 
-def test_create_product_returns_422_for_invalid_price(client: TestClient) -> None:
+def test_create_product_returns_422_for_invalid_price(client: TestClient, admin_access) -> None:
     create_mock = AsyncMock()
 
     with patch(
@@ -96,7 +96,7 @@ def test_create_product_returns_422_for_invalid_price(client: TestClient) -> Non
     create_mock.assert_not_awaited()
 
 
-def test_update_product_returns_200(client: TestClient) -> None:
+def test_update_product_returns_200(client: TestClient, admin_access) -> None:
     with patch(
         "app.routers.products.update_product_service",
         new=AsyncMock(return_value=make_product()),
@@ -117,6 +117,7 @@ def test_update_product_returns_200(client: TestClient) -> None:
 
 def test_update_product_returns_404_when_product_does_not_exist(
     client: TestClient,
+    admin_access,
 ) -> None:
     with patch(
         "app.routers.products.update_product_service",
@@ -136,7 +137,7 @@ def test_update_product_returns_404_when_product_does_not_exist(
     assert response.json()["detail"] == "No matched product for id of 999"
 
 
-def test_delete_product_returns_204(client: TestClient) -> None:
+def test_delete_product_returns_204(client: TestClient, admin_access) -> None:
     with patch(
         "app.routers.products.delete_product_service",
         new=AsyncMock(return_value=True),
@@ -149,6 +150,7 @@ def test_delete_product_returns_204(client: TestClient) -> None:
 
 def test_delete_product_returns_404_when_product_does_not_exist(
     client: TestClient,
+    admin_access,
 ) -> None:
     with patch(
         "app.routers.products.delete_product_service",
