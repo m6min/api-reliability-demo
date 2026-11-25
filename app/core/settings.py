@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_WINDOW_SECONDS: int = 60
     JWT_SECRET_KEY: SecretStr = Field(min_length=32)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30,gt=0)
+    CORS_ORIGINS: list[str] = Field(default_factory=list)
     SQL_ECHO: bool = False
     @property
     def DATABASE_URL(self) -> str:
