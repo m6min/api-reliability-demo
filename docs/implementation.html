@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Redis caching, rate limiting, authentication, failure handling and load testing in a small FastAPI project.">
+<title>What I built · API Reliability Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="implementation.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <nav aria-label="Sections">
+      <a href="index.html">Benchmarks</a>
+      <a href="#top" class="active">What I built</a>
+      <a href="#caching">Caching</a>
+      <a href="#traffic">Traffic control</a>
+      <a href="#auth">Authentication</a>
+      <a href="#delivery">Testing &amp; delivery</a>
+      <a href="#limits">Current limits</a>
+    </nav>
+    <a class="repo" href="https://github.com/m6min/api-reliability-demo" target="_blank" rel="noopener">Back to repo page<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5 7 9M12.5 9.5v3a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h3"/></svg></a>
+    <div class="stack">
+      <span>FastAPI</span><span>PostgreSQL</span><span>Redis</span><span>Locust</span>
+    </div>
+  </aside>
+
+  <main id="top">
+    <header class="topbar">
+      <div>
+        <h1>What I built</h1>
+      </div>
+      <div class="topbar-actions">
+        <a class="btn-ghost" href="index.html">Benchmarks</a>
+        <a class="btn-ghost" href="https://github.com/m6min/api-reliability-demo#run-locally" target="_blank" rel="noopener">Run locally</a>
+      </div>
+    </header>
+
+    <article class="card intro">
+      <div class="card-head"><h2>Why I built this</h2></div>
+      <ul class="takeaways">
+        <li>I knew caching, rate limiting and auth <mark>in theory</mark>. I wanted to build them into a small API and see what actually happens when requests come in.</li>
+        <li>Products were just a simple resource to work with. The other goal was <mark>learning Locust basics</mark>: generating load, comparing cache ON and OFF, and not trusting a single fast request.</li>
+      </ul>
+    </article>
+
+    <article class="card flow-card" id="flow">
+      <div class="card-head">
+        <h2>The path of GET /api/products/</h2>
+        <div class="legend static">
+          <span><i style="background:var(--on)"></i>Cache hit</span>
+          <span><i style="background:var(--off)"></i>Cache miss</span>
+          <span><i style="background:var(--bad)"></i>Rejected</span>
+        </div>
+      </div>
+      <svg class="flow" viewBox="0 0 900 230" role="img" aria-label="Request flow: rate limit, then cache lookup; a hit returns directly, a miss reads PostgreSQL and writes the cache before responding.">
+        <defs>
+          <marker id="a-n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#5d6375"/></marker>
+          <marker id="a-on" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#3ecfb2"/></marker>
+          <marker id="a-off" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f2a541"/></marker>
+          <marker id="a-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f0616d"/></marker>
+        </defs>
+
+        <path class="edge" d="M130 72H166" marker-end="url(#a-n)"/>
+        <path class="edge" d="M300 72H336" marker-end="url(#a-n)"/>
+        <path class="edge bad" d="M235 94V146" marker-end="url(#a-bad)"/>
+        <text class="edge-label" x="243" y="126">over limit</text>
+        <path class="edge on" d="M480 72H736" marker-end="url(#a-on)"/>
+        <text class="edge-label on" x="608" y="64" text-anchor="middle">hit</text>
+        <path class="edge off" d="M410 94V146" marker-end="url(#a-off)"/>
+        <text class="edge-label off" x="418" y="126">miss or Redis error</text>
+        <path class="edge off" d="M480 172H536" marker-end="url(#a-off)"/>
+        <path class="edge off" d="M680 172H805V98" marker-end="url(#a-off)"/>
+
+        <g class="node"><title>Every request starts here. 50 Locust users sent these in the benchmark.</title>
+          <rect x="20" y="50" width="110" height="44" rx="9"/><text x="75" y="76">Request</text></g>
+        <g class="node"><title>Fixed-window counter in Redis, per IP. Fail-open for this endpoint.</title>
+          <rect x="170" y="50" width="130" height="44" rx="9"/><text x="235" y="76">Rate limit</text></g>
+        <g class="node"><title>Look up products:list:v1 in Redis.</title>
+          <rect x="340" y="50" width="140" height="44" rx="9"/><text x="410" y="76">Cache lookup</text></g>
+        <g class="node end"><title>Return the product list as JSON.</title>
+          <rect x="740" y="50" width="130" height="44" rx="9"/><text x="805" y="76">Response</text></g>
+        <g class="node bad"><title>429 Too Many Requests with a Retry-After header.</title>
+          <rect x="170" y="150" width="130" height="44" rx="9"/><text x="235" y="176">429</text></g>
+        <g class="node"><title>Read the products with async SQLAlchemy.</title>
+          <rect x="340" y="150" width="140" height="44" rx="9"/><text x="410" y="176">PostgreSQL</text></g>
+        <g class="node"><title>Store a JSON copy with a TTL. A failed write is only logged.</title>
+          <rect x="540" y="150" width="140" height="44" rx="9"/><text x="610" y="176">Write to cache</text></g>
+      </svg>
+      <p class="note">The <mark>turquoise path</mark> is what the cache ON benchmark measures; the orange one is the cache OFF case. Writes (create, update, delete) skip this path and just clear the cache key afterwards.</p>
+    </article>
+
+    <section class="grid two-even" id="caching">
+      <article class="card feature">
+        <div class="card-head"><h2>Read Redis before PostgreSQL</h2><span class="tag on">Caching</span></div>
+        <ul class="takeaways">
+          <li>I cache <code>GET /api/products/</code> under <code>products:list:v1</code>.</li>
+          <li>On a hit I return the cached list. On a miss I read PostgreSQL and store a JSON copy with a <mark>configurable TTL</mark>.</li>
+          <li>Pydantic turns the JSON back into response models. An empty list still counts as a hit.</li>
+        </ul>
+        <p class="note">Not covered yet: the single-product endpoint isn't cached, and there's no pagination or protection against many cache misses at once.</p>
+        <a class="source-link" href="https://github.com/m6min/api-reliability-demo/blob/main/app/cache/product_cache.py" target="_blank" rel="noopener">product_cache.py</a>
+      </article>
+      <article class="card feature">
+        <div class="card-head"><h2>Clear the list after a write</h2><span class="tag on">Caching</span></div>
+        <ul class="takeaways">
+          <li>After a successful create, update or delete, the service <mark>deletes the list key</mark>.</li>
+          <li>The next list request reads fresh data from PostgreSQL and fills the cache again.</li>
+          <li>I only invalidate after the database call succeeds, so a failed update doesn't look like a change.</li>
+        </ul>
+        <p class="note">Tradeoff: if deleting the key fails after a commit, I still return success and log it. Old data can stay until the TTL runs out.</p>
+        <a class="source-link" href="https://github.com/m6min/api-reliability-demo/blob/main/app/services/product_service.py" target="_blank" rel="noopener">product_service.py</a>
+      </article>
+    </section>
+
+    <section class="grid two-even" id="traffic">
+      <article class="card feature">
+        <div class="card-head"><h2>Fixed-window rate limiting</h2><span class="tag off">Traffic</span></div>
+        <ul class="takeaways">
+          <li>I count requests per client IP and endpoint in Redis. The first request starts the window.</li>
+          <li>A Lua script increments the counter and sets the expiry <mark>in one atomic step</mark>.</li>
+          <li>Going over the limit returns <code>429</code> with <code>Retry-After</code>. Login and register allow <mark>5 attempts per 60 s</mark> per IP.</li>
+        </ul>
+        <p class="note">This isn't a token bucket. The counter resets at the end of the window, so bursts around the boundary are possible, and users behind the same IP share a limit.</p>
+        <a class="source-link" href="https://github.com/m6min/api-reliability-demo/blob/main/app/rate_limit/limiter.py" target="_blank" rel="noopener">limiter.py</a>
+      </article>
+      <article class="card feature">
+        <div class="card-head"><h2>When Redis goes down</h2><span class="tag off">Traffic</span></div>
+        <ul class="takeaways">
+          <li>Cache errors and timeouts fall back to PostgreSQL. Failed cache writes get logged.</li>
+          <li>The product-list limiter is <mark>fail-open</mark>: reads keep working without rate limiting.</li>
+          <li>Login and register are <mark>fail-closed</mark>: they return <code>503</code> if the limiter is unavailable.</li>
+        </ul>
+        <p class="note">I'd rather keep product reads up than allow unlimited login attempts. The cost is more load on PostgreSQL while Redis is down.</p>
+        <a class="source-link" href="https://github.com/m6min/api-reliability-demo/blob/main/app/rate_limit/dependencies.py" target="_blank" rel="noopener">dependencies.py</a>
+      </article>
+    </section>
+
+    <section class="grid two-even" id="auth">
+      <article class="card feature">
+        <div class="card-head"><h2>Password handling</h2><span class="tag on">Auth</span></div>
+        <ul class="takeaways">
+          <li>Passwords are stored as <mark>Argon2 hashes</mark> via pwdlib, never as plain text.</li>
+          <li>If the email doesn't exist, I still verify against a dummy hash so the response doesn't come back instantly.</li>
+          <li>Wrong password, missing account and inactive user all get <mark>the same error</mark>. Hashing runs in a thread pool so it doesn't block the event loop.</li>
+        </ul>
+        <p class="note">The dummy hash removes one timing difference; it doesn't make the whole request constant-time. Registration still says when an email is taken.</p>
+        <a class="source-link" href="https://github.com/m6min/api-reliability-demo/blob/main/app/services/auth_service.py" target="_blank" rel="noopener">auth_service.py</a>
+      </article>
+      <article class="card feature">
+        <div class="card-head"><h2>JWT and admin checks</h2><span class="tag on">Auth</span></div>
+        <ul class="takeaways">
+          <li>Login issues a signed token with a user ID and expiry. I check the signature and required claims.</li>
+          <li><code>/api/users/me</code> loads the current active user. Product writes also need <code>is_admin=true</code>.</li>
+          <li>Registration can't set the admin flag, and permissions are read from the database, so <mark>removing admin takes effect on the next request</mark>.</li>
+        </ul>
+        <p class="note">Left out on purpose: refresh tokens and instant token revocation. JWT payloads are readable, not encrypted.</p>
+        <a class="source-link" href="https://github.com/m6min/api-reliability-demo/blob/main/app/api/dependencies.py" target="_blank" rel="noopener">dependencies.py</a>
+      </article>
+    </section>
+
+    <section class="grid two-even" id="delivery">
+      <article class="card feature">
+        <div class="card-head"><h2>Layered database access</h2><span class="tag on">Database</span></div>
+        <ul class="takeaways">
+          <li>Routers handle HTTP, services do the work, repositories talk to PostgreSQL with <mark>async SQLAlchemy</mark>.</li>
+          <li>Alembic tracks schema changes. A unique constraint protects email registration, even with parallel requests.</li>
+          <li>Repository errors roll back the session, and password hashes never appear in user responses.</li>
+        </ul>
+        <a class="source-link" href="https://github.com/m6min/api-reliability-demo/tree/main/app/repositories" target="_blank" rel="noopener">app/repositories</a>
+      </article>
+      <article class="card feature">
+        <div class="card-head"><h2>Tests and CI</h2><span class="tag on">pytest</span></div>
+        <ul class="takeaways">
+          <li>I test CRUD, cache hits and misses, Redis errors, JWT validation and admin permissions.</li>
+          <li>Repository tests use a separate PostgreSQL database. Redis is <mark>mocked</mark>, so these aren't real Redis integration tests.</li>
+          <li>GitHub Actions spins up PostgreSQL and runs pytest on every push and pull request.</li>
+        </ul>
+        <a class="source-link" href="https://github.com/m6min/api-reliability-demo/actions" target="_blank" rel="noopener">Workflow runs</a>
+      </article>
+      <article class="card feature">
+        <div class="card-head"><h2>Load testing with Locust</h2><span class="tag off">Locust</span></div>
+        <ul class="takeaways">
+          <li>I compared cache ON and OFF with 2 and 500 products, <mark>three runs per mode</mark>.</li>
+          <li>The benchmark page shows response times, percentiles, throughput and every single run.</li>
+          <li>Everything shared one laptop, and I didn't measure SQL query counts, so this isn't a production capacity number.</li>
+        </ul>
+        <p class="note">These runs were recorded before the later auth and logging changes.</p>
+        <a class="source-link" href="index.html#method">How I measured</a>
+      </article>
+      <article class="card feature">
+        <div class="card-head"><h2>Docker and logging</h2><span class="tag on">Docker</span></div>
+        <ul class="takeaways">
+          <li>Compose starts FastAPI, PostgreSQL and Redis. The API waits for healthy databases and <mark>runs migrations first</mark>.</li>
+          <li>PostgreSQL data lives in a named volume, and secrets are passed at runtime, not baked into the image.</li>
+          <li>Request logs show method, path, status and duration. Cache logs show HIT, MISS and ERROR.</li>
+        </ul>
+        <p class="note">The health check only hits the OpenAPI document, so it tells me the API responds, not that the databases are still reachable.</p>
+        <a class="source-link" href="https://github.com/m6min/api-reliability-demo/blob/main/docker-compose.yml" target="_blank" rel="noopener">docker-compose.yml</a>
+      </article>
+    </section>
+
+    <article class="card" id="limits">
+      <div class="card-head"><h2>Current limits</h2></div>
+      <ul class="takeaways">
+        <li>I kept the API small on purpose so I could focus on these pieces. It runs locally; this page doesn't call a live API.</li>
+        <li>Before a real deployment it would need <mark>pagination</mark>, <mark>refresh tokens</mark>, proxy-aware client IPs and stronger cache consistency.</li>
+      </ul>
+    </article>
+
+    <footer>raw benchmark data lives in <code>docs/data</code> · <a href="#top">Back to top</a></footer>
+  </main>
+</div>
+<script src="implementation.js"></script>
+</body>
+</html>

@@ -12,14 +12,15 @@
 <div class="shell">
   <aside class="sidebar">
     <nav aria-label="Sections">
+      <a href="implementation.html">What I built</a>
       <a href="#top" class="active">Overview</a>
-      <a href="#timeline">Overtime</a>
+      <a href="#timeline">Over time</a>
       <a href="#distribution">Distribution</a>
       <a href="#datasets">Dataset size</a>
       <a href="#runs">All runs</a>
       <a href="#method">How I measured</a>
     </nav>
-    <a class="repo" href="https://github.com/m6min/api-reliability-demo" target="_blank" rel="noopener">github.com/m6min/api-reliability-demo</a>
+    <a class="repo" href="https://github.com/m6min/api-reliability-demo" target="_blank" rel="noopener">Back to repo page<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5 7 9M12.5 9.5v3a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h3"/></svg></a>
     <div class="stack">
       <span>FastAPI</span><span>PostgreSQL</span><span>Redis</span><span>Locust</span>
     </div>
@@ -32,6 +33,7 @@
         <p class="crumb">GET /api/products · 50 users · 1 worker · 60 s per run</p>
       </div>
       <div class="topbar-actions">
+        <a class="btn-ghost" href="implementation.html">What I built</a>
         <div class="segmented" role="group" aria-label="Dataset">
           <button data-dataset="verification" aria-pressed="false">2 products</button>
           <button data-dataset="products-500" aria-pressed="true">500 products</button>
@@ -154,7 +156,7 @@
       </ul>
     </article>
 
-    <footer>measured on 23 Nov 2026 · raw CSVs and logs live in <code>docs/data</code></footer>
+    <footer>Recorded on 23 Nov 2026 · JSON and chart CSVs are in <code>docs/data</code> · local logs are not committed.</footer>
   </main>
 </div>
 <div class="tooltip" id="tooltip" role="tooltip"></div>

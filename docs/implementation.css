@@ -1,0 +1,25 @@
+.intro,#limits,.flow-card{margin-bottom:18px}
+.flow{display:block;width:100%;height:auto;max-height:260px}
+.flow .node rect{fill:var(--panel-2);stroke:#2f3546;stroke-width:1}
+.flow .node text{fill:var(--text);font:500 13px Inter,system-ui,sans-serif;text-anchor:middle}
+.flow .node:hover rect{stroke:var(--accent)}
+.flow .node.end rect{stroke:var(--on)}
+.flow .node.bad rect{stroke:var(--bad)}
+.flow .node.bad text{fill:var(--bad);font-family:var(--mono)}
+.flow .edge{fill:none;stroke:#5d6375;stroke-width:1.6}
+.flow .edge.on{stroke:var(--on);stroke-width:2.2}
+.flow .edge.off{stroke:var(--off);stroke-width:1.8;stroke-dasharray:5 4}
+.flow .edge.bad{stroke:var(--bad);stroke-dasharray:3 3}
+.flow .edge-label{fill:var(--muted);font:11px var(--mono)}
+.flow .edge-label.on{fill:var(--on)}
+.flow .edge-label.off{fill:var(--off)}
+.legend.static{margin:0}
+.legend.static span{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px}
+section.grid{scroll-margin-top:24px}
+#limits{scroll-margin-top:24px}
+.feature{display:flex;flex-direction:column}
+.feature .card-head{align-items:center}
+.feature .note{margin-top:auto;padding-top:12px}
+.feature .takeaways{margin-bottom:14px}
+.source-link{display:inline-block;margin-top:12px;color:#b6beff;font:12px var(--mono);text-decoration:none}
+.source-link:hover{text-decoration:underline;text-underline-offset:3px}
