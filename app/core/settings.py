@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: SecretStr = Field(min_length=32)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30,gt=0)
     CORS_ORIGINS: list[str] = Field(default_factory=list)
+    REDIS_CONNECT_TIMEOUT_SECONDS: float = Field(default=1.0, gt=0)
+    REDIS_SOCKET_TIMEOUT_SECONDS: float = Field(default=1.0, gt=0)
     SQL_ECHO: bool = False
     @property
     def DATABASE_URL(self) -> str:

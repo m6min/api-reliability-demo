@@ -26,7 +26,7 @@ router = APIRouter()
 @router.get("/", response_model=list[ProductRead],
             summary="Get all products from database in a list",
             dependencies=[
-                Depends(rate_limit(namespace="products:list"))
+                Depends(rate_limit(namespace="products:list", fail_open=True))
             ])
 async def get_products(db: Annotated[AsyncSession,
                                     Depends(get_db)], redis: Annotated[Redis, Depends(get_redis)]) -> list[ProductRead]:
