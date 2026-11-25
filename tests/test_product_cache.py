@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 from unittest.mock import AsyncMock
 
@@ -24,8 +25,9 @@ def make_product_read() -> ProductRead:
 
 
 @pytest.mark.asyncio
-async def test_get_cached_products_returns_none_on_cache_miss() -> None:
+async def test_get_cached_products_returns_none_on_cache_miss(caplog) -> None:
     """It returns none when the product list cache does not exist."""
+    caplog.set_level(logging.INFO, logger="app.cache.product_cache")
     redis = AsyncMock()
     redis.get = AsyncMock(return_value=None)
 
@@ -33,11 +35,14 @@ async def test_get_cached_products_returns_none_on_cache_miss() -> None:
 
     assert result is None
     redis.get.assert_awaited_once_with(PRODUCTS_LIST_CACHE_KEY)
+    assert f"cache=MISS key={PRODUCTS_LIST_CACHE_KEY}" in caplog.text
+    assert "cache=HIT" not in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_get_cached_products_deserializes_cached_products() -> None:
+async def test_get_cached_products_deserializes_cached_products(caplog) -> None:
     """It converts cached JSON into product response models."""
+    caplog.set_level(logging.INFO, logger="app.cache.product_cache")
     redis = AsyncMock()
     redis.get = AsyncMock(
         return_value='[{"id":1,"name":"Keyboard","description":"Mechanical keyboard","price":"99.90","stock":10}]'
@@ -46,6 +51,8 @@ async def test_get_cached_products_deserializes_cached_products() -> None:
     result = await get_cached_products(redis)
 
     assert result == [make_product_read()]
+    assert f"cache=HIT key={PRODUCTS_LIST_CACHE_KEY}" in caplog.text
+    assert "cache=MISS" not in caplog.text
 
 
 @pytest.mark.asyncio

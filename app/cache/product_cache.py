@@ -20,15 +20,27 @@ async def get_cached_products(redis: Redis) -> list[ProductRead] | None:
         cached_products = await redis.get(PRODUCTS_LIST_CACHE_KEY)
     except (RedisConnectionError, RedisTimeoutError):
         logger.warning(
-            "Product cache read failed; falling back to PostgreSQL",
+            "cache=ERROR operation=GET key=%s fallback=postgresql",
+            PRODUCTS_LIST_CACHE_KEY,
             exc_info=True,
         )
         return None
 
     if cached_products is None:
+        logger.info(
+            "cache=MISS key=%s",
+            PRODUCTS_LIST_CACHE_KEY,
+        )
         return None
 
-    return product_list_adapter.validate_json(cached_products)
+    products = product_list_adapter.validate_json(cached_products)
+
+    logger.info(
+        "cache=HIT key=%s",
+        PRODUCTS_LIST_CACHE_KEY,
+    )
+
+    return products
 
 
 async def set_cached_products(
